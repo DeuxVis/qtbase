@@ -321,6 +321,9 @@
 #ifdef QT_SECURETRANSPORT
 #include "qsslsocket_mac_p.h"
 #endif
+#if QT_CONFIG(mbedtls)
+#include "qsslsocket_mbedtls_p.h"
+#endif
 #include "qsslconfiguration_p.h"
 
 #include <QtCore/qdebug.h>

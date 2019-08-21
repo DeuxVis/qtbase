@@ -1,0 +1,8 @@
+This branch is just a proof of concept to verify that using mbedTLS as a ssl backend for Qt is possible.
+
+Do not expect anything fancy or stable for now.
+
+Tested against mbedTLS version 2.8.0 and QT 5.12.0, and for https usage only.
+
+Use a configure command with options "-ssl -no-openssl -mbedtls" to include mbedTLS as the ssl backend.
+Also add "-make examples" to test the download / downloadmanager examples against https urls.

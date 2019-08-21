@@ -164,7 +164,7 @@ void tst_QSslKey::createPlainTestRows(bool filter, QSsl::EncodingFormat format)
     foreach (KeyInfo keyInfo, keyInfoList) {
         if (filter && keyInfo.format != format)
             continue;
-#ifdef Q_OS_WINRT
+#ifdef Q_OS_WINRT || QT_CONFIG(mbedtls)
         if (keyInfo.fileInfo.fileName().contains("RC2-64"))
             continue; // WinRT treats RC2 as 128 bit
 #endif
@@ -598,7 +598,7 @@ void tst_QSslKey::encrypt()
     QFETCH(QByteArray, cipherText);
     QByteArray iv("abcdefgh");
 
-#ifdef Q_OS_WINRT
+#ifdef Q_OS_WINRT || QT_CONFIG(mbedtls)
     QEXPECT_FAIL("RC2-40-CBC, length 0", "WinRT treats RC2 as 128-bit", Abort);
     QEXPECT_FAIL("RC2-40-CBC, length 8", "WinRT treats RC2 as 128-bit", Abort);
     QEXPECT_FAIL("RC2-64-CBC, length 0", "WinRT treats RC2 as 128-bit", Abort);

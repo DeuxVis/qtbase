@@ -17,6 +17,7 @@
             "dtls": "boolean",
             "sctp": "boolean",
             "securetransport": "boolean",
+            "mbedtls": "boolean",
             "ssl": "boolean",
             "system-proxies": "boolean"
         }
@@ -229,13 +230,13 @@
             "autoDetect": "!config.winrt && !config.wasm",
             "enable": "input.openssl == 'yes' || input.openssl == 'runtime'",
             "disable": "input.openssl == 'no' || input.openssl == 'linked' || input.ssl == 'no'",
-            "condition": "!features.securetransport && libs.openssl_headers"
+            "condition": "!features.securetransport && !features.mbedtls && libs.openssl_headers"
         },
         "openssl-linked": {
             "label": "  Qt directly linked to OpenSSL",
             "autoDetect": false,
             "enable": "input.openssl == 'linked'",
-            "condition": "!features.securetransport && libs.openssl",
+            "condition": "!features.securetransport && !features.mbedtls && libs.openssl",
             "output": [
                 "privateFeature",
                 { "type": "define", "name": "QT_LINKED_OPENSSL" }
@@ -250,9 +251,18 @@
                 { "type": "define", "name": "QT_SECURETRANSPORT" }
             ]
         },
+        "mbedtls": {
+            "label": "mbedTLS",
+            "disable": "input.mbedtls== 'no' || input.ssl == 'no'",
+            "condition": "input.mbedtls == 'yes' && (input.openssl == '' || input.openssl == 'no')",
+            "output": [
+                "publicFeature",
+                { "type": "define", "name": "QT_MBEDTLS" }
+            ]
+        },
         "ssl": {
             "label": "SSL",
-            "condition": "config.winrt || features.securetransport || features.openssl",
+            "condition": "config.winrt || features.securetransport || features.mbedtls || features.openssl",
             "output": [ "publicFeature", "feature" ]
         },
         "dtls": {
@@ -391,6 +401,7 @@ For example:
                     "args": "securetransport",
                     "condition": "config.darwin"
                 },
+                "mbedtls",
                 "openssl",
                 "openssl-linked",
                 "opensslv11",

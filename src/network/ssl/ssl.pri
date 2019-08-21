@@ -58,6 +58,17 @@ qtConfig(ssl) {
                    ssl/qsslsocket_mac.cpp \
                    ssl/qsslellipticcurve_dummy.cpp
     }
+    
+    qtConfig(mbedtls) {
+        HEADERS += ssl/qsslsocket_mbedtls_p.h
+        SOURCES += ssl/qssldiffiehellmanparameters_dummy.cpp \
+                   ssl/qsslellipticcurve_dummy.cpp \
+                   ssl/qsslkey_qt.cpp \
+                   ssl/qsslsocket_mbedtls.cpp \
+                   ssl/qsslkey_mbedtls.cpp	
+
+        LIBS_PRIVATE += "-lmbedtls" "-lmbedx509" "-lmbedcrypto"
+    }
 
     qtConfig(dtls) {
         HEADERS += ssl/qdtls.h \
