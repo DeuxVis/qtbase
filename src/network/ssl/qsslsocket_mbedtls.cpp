@@ -110,9 +110,6 @@ QList<QSslCertificate> QSslSocketPrivate::systemCaCertificates()
     }
     for (const QString& file : qAsConst(certFiles))
         systemCaCerts.append(QSslCertificate::fromPath(file, platformEncodingFormat));
-
-    systemCaCerts.append(QSslCertificate::fromPath(QLatin1String("/etc/pki/tls/certs/ca-bundle.crt"), QSsl::Pem)); // Fedora, Mandriva
-    systemCaCerts.append(QSslCertificate::fromPath(QLatin1String("/usr/local/share/certs/ca-root-nss.crt"), QSsl::Pem)); // FreeBSD's ca_root_nss
     
     return systemCaCerts;
 }
@@ -164,19 +161,32 @@ QSslSocketBackendPrivate::QSslSocketBackendPrivate()
         emit q->error(q->SocketError::SslInternalError);
     }
     
-    int ret = mbedtls_x509_crt_parse_path( &_ca, "/usr/share/ca-certificates/mozilla" );
-    if( ret < 0 )
+    // Once a mbedTLs version of QSslCertificate will be available we ought to use it instead.
+    QList<QByteArray> rootCertDirs = unixRootCertDirectories();
+    for (QByteArray dir : rootCertDirs)
     {
-        qCWarning(catQSslSocketBackendPrivate, "mbedtls_x509_crt_parse_path failed !");
-        QSslError error(QSslError::InvalidCaCertificate);
-        sslErrors += error;
-        emit q->sslErrors(sslErrors);
-    }
-    else if (ret > 0)
-    {
-        qCWarning(catQSslSocketBackendPrivate,
-            "Warning : mbedtls_x509_crt_parse_path error while loading %d of the certificates from %s",
-            ret, "/usr/share/ca-certificates/mozilla");
+        const char* caFolder = dir.data();
+        if (MBEDTLS_DEBUG_LEVEL)
+            qCWarning(catQSslSocketBackendPrivate, "CA certs dir '%s' does %sexist.", caFolder,
+                QDir(QString::fromUtf8(caFolder)).exists() ? "" : "not ");
+        if (QDir(QString::fromUtf8(caFolder)).exists())
+        {
+            if (MBEDTLS_DEBUG_LEVEL)
+                qCWarning(catQSslSocketBackendPrivate, "Loading CA certs from '%s'", caFolder);
+            int ret = mbedtls_x509_crt_parse_path( &_ca, caFolder );
+            if( ret < 0 )
+            {
+                qCWarning(catQSslSocketBackendPrivate, "mbedtls_x509_crt_parse_path failed ! Was tring to parse path '%s'", caFolder);
+                QSslError error(QSslError::InvalidCaCertificate);
+                sslErrors += error;
+                emit q->sslErrors(sslErrors);
+            }
+            else if (ret > 0 && MBEDTLS_DEBUG_LEVEL)
+            {
+                qCWarning(catQSslSocketBackendPrivate,
+                    "Warning : mbedtls_x509_crt_parse_path error while loading some (%d) of the certificate(s) from %s", ret, caFolder);
+            }
+        }
     }
     
     ensureInitialized();
@@ -203,9 +213,10 @@ void QSslSocketBackendPrivate::startClientEncryption()
         qCWarning(catQSslSocketBackendPrivate, "Entering startClientEncryption()");
     if (connectionEncrypted)
     {
+        // let's not mess up the already encrypted connection...
         if (MBEDTLS_DEBUG_LEVEL)
             qCWarning(catQSslSocketBackendPrivate, "Early leaving startClientEncryption()");
-        return; // let's not mess up the connection...
+        return;
     }
 	
     connectionEncrypted = false;
@@ -326,7 +337,6 @@ void QSslSocketBackendPrivate::transmit()
     }
     while( 1 );
     
-    //buffer.chop(bytesToRead);
     if (bytesRead)
     {        
         if (MBEDTLS_DEBUG_LEVEL)
@@ -399,28 +409,7 @@ void QSslSocketBackendPrivate::continueHandshake()
     char* peerName = (char*)malloc( sizeof(char*) * bufsize);
     strncpy( peerName, plainSocket->peerName().toStdString().c_str(), bufsize );
     
-    std::string pp = std::to_string( plainSocket->peerPort() );
-    bufsize = pp.length() + 1;
-    char* peerPortNum = (char*)malloc( sizeof(char*) * bufsize);
-    strncpy( peerPortNum, pp.c_str(), bufsize );
-    
-    
-    if (MBEDTLS_DEBUG_LEVEL)
-        qCWarning(catQSslSocketBackendPrivate, "About to mbedtls_net_connect to hostname '%s' : port '%s'", peerName, peerPortNum);
-    int res;
-    if( ( res = mbedtls_net_connect( &_net_ctx, peerName, peerPortNum, MBEDTLS_NET_PROTO_TCP ) ) != 0 )
-    {
-        char buff[255];
-        mbedtls_strerror(res, buff,255);
-        qCWarning(catQSslSocketBackendPrivate, "mbedtls_net_connect failed ! It returned -0x%x (%s)", -res, buff);
-        emit q->error(q->SocketError::NetworkError);
-    }
-    
-    free( peerPortNum );
-    // Now this is an ugly hack we might want to remove later on once we get out of POC mode : closing and reopening the socket.
-    close( cachedSocketDescriptor );
-    plainSocket->setSocketDescriptor(_net_ctx.fd);
-    cachedSocketDescriptor = _net_ctx.fd;
+    _net_ctx.fd = plainSocket->socketDescriptor();
     
     if( mbedtls_ssl_config_defaults( &_ssl_conf,
                 MBEDTLS_SSL_IS_CLIENT,
@@ -456,6 +445,7 @@ void QSslSocketBackendPrivate::continueHandshake()
     mbedtls_ssl_set_bio( &_ssl_ctx, &_net_ctx, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout );
     mbedtls_ssl_set_timer_cb( &_ssl_ctx, &_timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay );
     
+    int res;
     while( ( res = mbedtls_ssl_handshake( &_ssl_ctx ) ) != 0 )
     {
         if (res != MBEDTLS_ERR_SSL_WANT_READ && res != MBEDTLS_ERR_SSL_WANT_WRITE)

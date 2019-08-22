@@ -50,12 +50,7 @@ namespace {
 static QByteArray doCrypt(QSslKeyPrivate::Cipher cipher, QByteArray data, const QByteArray &key, const QByteArray &iv, bool encrypt)
 {
     //qCWarning(lcSsl, "%s not implemented...", encrypt ? "Encrypt" : "Decrypt");
-    // Remove those once implemented.
-    /* QSslKeyPrivate::Cipher unusedCipherParam = cipher; if (unusedCipherParam == QSslKeyPrivate::Cipher::DesCbc) {}
-    QByteArray unusedDataParam = data; unusedDataParam.clear();
-    QByteArray unusedKeyParam = key; unusedKeyParam.clear();
-    QByteArray unusedIVParam = iv; unusedIVParam.clear();
-    bool unusedEncryptParam = encrypt; unusedEncryptParam =! unusedEncryptParam; */
+    // Remove that once implemented.
     
     Q_UNIMPLEMENTED();
     return {};
