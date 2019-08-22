@@ -321,6 +321,9 @@
 #ifdef QT_SECURETRANSPORT
 #include "qsslsocket_mac_p.h"
 #endif
+#if QT_CONFIG(mbedtls)
+#include "qsslsocket_mbedtls_p.h"
+#endif
 #include "qsslconfiguration_p.h"
 
 #include <QtCore/qdebug.h>
@@ -2792,7 +2795,7 @@ bool QSslSocketPrivate::rootCertOnDemandLoadingSupported()
 */
 QList<QByteArray> QSslSocketPrivate::unixRootCertDirectories()
 {
-    return QList<QByteArray>() <<  "/etc/ssl/certs/" // (K)ubuntu, OpenSUSE, Mandriva ...
+    return QList<QByteArray>() << "/etc/ssl/certs/" // (K)ubuntu, OpenSUSE, Mandriva ...
                                << "/usr/lib/ssl/certs/" // Gentoo, Mandrake
                                << "/usr/share/ssl/" // Centos, Redhat, SuSE
                                << "/usr/local/ssl/" // Normal OpenSSL Tarball
@@ -2800,7 +2803,10 @@ QList<QByteArray> QSslSocketPrivate::unixRootCertDirectories()
                                << "/usr/local/ssl/certs/" // Solaris
                                << "/etc/openssl/certs/" // BlackBerry
                                << "/opt/openssl/certs/" // HP-UX
-                               << "/etc/ssl/"; // OpenBSD
+                               << "/etc/ssl/" // OpenBSD
+                               << "/etc/pki/tls/certs/" //  // Fedora, Mandriva
+                               << "/usr/local/share/certs/" // FreeBSD's ca_root_nss
+                               << "/usr/share/ca-certificates/mozilla/"; // ca-certificates debian (and all derivatives) package.
 }
 
 /*!
